@@ -1,0 +1,239 @@
+The MIT License (MIT)
+
+Copyright (c) 2016 John Deeny
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+# Shift v0 4-bits left
+##! IN=(v0) OUT=(v0) CLOBBER=()
+: v0-shl4
+  v0 <<= v0
+  v0 <<= v0
+  v0 <<= v0
+  v0 <<= v0
+  return
+
+# Shift v1 4-bits left
+##! IN=(v1) OUT=(v1) CLOBBER=()
+: v1-shl4
+  v1 <<= v1
+  v1 <<= v1
+  v1 <<= v1
+  v1 <<= v1
+  return
+
+# Shift v0 4-bits right
+##! IN=(v0) OUT=(v0) CLOBBER=()
+: v0-shr4
+  v0 >>= v0
+  v0 >>= v0
+  v0 >>= v0
+  v0 >>= v0
+  return
+
+# Shift v0 4-bits right
+##! IN=(v1) OUT=(v1) CLOBBER=()
+: v1-shr4
+  v1 >>= v1
+  v1 >>= v1
+  v1 >>= v1
+  v1 >>= v1
+  return
+
+
+## 4-bit x 4-bit -> 8-bit multiply
+## Returns v0 = v0 * v1.
+##
+## v0 and v1 must be less than 16! The table could be made smaller if the function
+## checked for # operands equal to 0 or 1, but that would be quite a bit slower.
+## In: v0, v1  Out: v0, v1  Clobbers: i
+: mul4
+  i := mul4-table
+  i += v0
+  v1-shl4
+  i += v1
+  load v0
+  return
+: mul4-table
+0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0A 0x0B 0x0C 0x0D 0x0E 0x0F
+0x00 0x02 0x04 0x06 0x08 0x0A 0x0C 0x0E 0x10 0x12 0x14 0x16 0x18 0x1A 0x1C 0x1E
+0x00 0x03 0x06 0x09 0x0C 0x0F 0x12 0x15 0x18 0x1B 0x1E 0x21 0x24 0x27 0x2A 0x2D
+0x00 0x04 0x08 0x0C 0x10 0x14 0x18 0x1C 0x20 0x24 0x28 0x2C 0x30 0x34 0x38 0x3C
+0x00 0x05 0x0A 0x0F 0x14 0x19 0x1E 0x23 0x28 0x2D 0x32 0x37 0x3C 0x41 0x46 0x4B
+0x00 0x06 0x0C 0x12 0x18 0x1E 0x24 0x2A 0x30 0x36 0x3C 0x42 0x48 0x4E 0x54 0x5A
+0x00 0x07 0x0E 0x15 0x1C 0x23 0x2A 0x31 0x38 0x3F 0x46 0x4D 0x54 0x5B 0x62 0x69
+0x00 0x08 0x10 0x18 0x20 0x28 0x30 0x38 0x40 0x48 0x50 0x58 0x60 0x68 0x70 0x78
+0x00 0x09 0x12 0x1B 0x24 0x2D 0x36 0x3F 0x48 0x51 0x5A 0x63 0x6C 0x75 0x7E 0x87
+0x00 0x0A 0x14 0x1E 0x28 0x32 0x3C 0x46 0x50 0x5A 0x64 0x6E 0x78 0x82 0x8C 0x96
+0x00 0x0B 0x16 0x21 0x2C 0x37 0x42 0x4D 0x58 0x63 0x6E 0x79 0x84 0x8F 0x9A 0xA5
+0x00 0x0C 0x18 0x24 0x30 0x3C 0x48 0x54 0x60 0x6C 0x78 0x84 0x90 0x9C 0xA8 0xB4
+0x00 0x0D 0x1A 0x27 0x34 0x41 0x4E 0x5B 0x68 0x75 0x82 0x8F 0x9C 0xA9 0xB6 0xC3
+0x00 0x0E 0x1C 0x2A 0x38 0x46 0x54 0x62 0x70 0x7E 0x8C 0x9A 0xA8 0xB6 0xC4 0xD2
+0x00 0x0F 0x1E 0x2D 0x3C 0x4B 0x5A 0x69 0x78 0x87 0x96 0xA5 0xB4 0xC3 0xD2 0xE1
+
+
+## 8-bit x 8-bit -> 16-bit multiply
+## v1v0 = v0 * v1
+## This keeps running total in v3v2
+## In: v0, v1  Out: v0, v1  Clobbers: i, v2, v3
+: mul8-input 0 0      # buffer for input data
+: mul8
+  i := mul8-input     # save input
+  save v1
+
+  v2 := 0             # set total to 0
+  v3 := 0
+
+  i := mul8-input     # lo * lo
+  load v1
+  vF := 0x0F
+  v0 &= vF
+  v1 &= vF
+  mul4
+  v2 += v0
+  if vF == 1 then v3 += 1
+
+  i := mul8-input     # lo * hi
+  load v1
+  v1-shr4
+  vF := 0x0F
+  v0 &= vF
+  mul4
+  v1 := v0            # split byte, v0=lo, v1=high, add to total shifted 4 left
+  v0-shl4
+  v2 += v0
+  if vF == 1 then v3 += 1
+  v1-shr4
+  v3 += v1
+
+  i := mul8-input     # hi * lo
+  load v1
+  v0-shr4
+  vF := 0x0F
+  v1 &= vF
+  mul4
+  v1 := v0            # split byte, v0=lo, v1=high, add to total shifted 4 left
+  v0-shl4
+  v2 += v0
+  if vF == 1 then v3 += 1
+  v1-shr4
+  v3 += v1
+
+  i := mul8-input     # hi * hi
+  load v1
+  v0-shr4
+  v1-shr4
+  mul4
+  v3 += v0
+
+  v0 := v2
+  v1 := v3
+
+  return
+
+
+
+# Test code. Prints a scrolling list of 2 factors and their product.
+# Hold 'W' to pause the scroll.
+: main
+  :alias a v6
+  :alias b v7
+  :alias result-lo v8
+  :alias result-hi v9
+
+  hires
+  clear
+  : mainloop
+  a := random 0xFF
+  b := random 0xFF
+  v0 := a
+  v1 := b
+  mul8
+  result-hi := v1
+  result-lo := v0
+  print
+  plane 3
+  scroll-up 15
+  jump mainloop
+
+
+: dot 0x00 0x00 0x00 0x00 0x60 0x60
+: equals 0x00 0x00 0x00 0xF0 0x00 0xF0
+: print
+  :alias x vA
+  :alias y vB
+  x := 14
+  y := 50
+
+  plane 1
+  v0 := a
+  print-byte
+
+  x += 2
+  i := dot
+  plane 1
+  sprite x y 6
+  plane 2
+  sprite x y 6
+  x += 8
+
+  plane 1
+  v0 := b
+  print-byte
+
+  x += 4
+  i := equals
+  plane 1
+  sprite x y 6
+  plane 2
+  sprite x y 6
+  x += 10
+
+  plane 2
+  v0 := result-hi
+  print-byte
+  v0 := result-lo
+  print-byte
+
+  v0 := 5
+  v1 := 30
+  delay := v1
+  : delay-loop
+  if v0 key then delay := v1
+  vF := delay
+  if vF != 0 then jump delay-loop
+  return
+
+: print-byte
+  v1 := v0
+  v0-shr4
+  i := bighex v0
+  sprite x y 10
+  x += 10
+
+  v0 := v1
+  vF := 0xF
+  v0 &= vF
+  i := bighex v0
+  sprite x y 10
+  x += 10
+
+  return
