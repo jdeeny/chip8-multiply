@@ -151,70 +151,184 @@
 
 
 
+## 16-bit x 16-bit -> 32-bit multiply
+## v3v2v1v0 = v1v0 * v3v2
+## In: v0-3  Out: v0-3  Clobbers: i
+: mul16-input-loa 0
+: mul16-input-hia 0
+: mul16-input-lob 0
+: mul16-input-hib 0
+: mul16-savereg 0 0
+: mul16-scratch-lo 0
+: mul16-scratch-lomid 0
+: mul16-scratch-himid 0
+: mul16-scratch-hi 0
+: mul16
+  i := mul16-input-loa
+  save v4             # save v4 and v5 also, to restore later
+  i := mul16-scratch-lo
+  v0 := 0
+  v1 := 0
+  v2 := 0
+  v3 := 0
+  save v3
+
+  # lo * lo
+  i := mul16-input-loa
+  load v2
+  v1 := v2
+  mul8
+
+  i := mul16-scratch-lo
+  save v1
+
+  # hi * hi
+  i := mul16-input-hia
+  load v2
+  v1 := v2
+  mul8
+  i := mul16-scratch-himid
+  save v1
+
+  # hi * lo
+  i := mul16-input-hia
+  load v1
+  mul8
+  v3 := v0
+  v4 := v1
+  i := mul16-scratch-lomid
+  load v2
+  v0 += v3
+  if vF == 1 then v1 += 1
+  v1 += v4
+  if vF == 1 then v2 += 1
+  i := mul16-scratch-lomid
+  save v2
+
+  # lo * hi
+  i := mul16-input-loa
+  load v3
+  v1 := v3
+  mul8
+  v3 := v0
+  v4 := v1
+  i := mul16-scratch-lomid
+  load v2
+  v0 += v3
+  if vF == 1 then v1 += 1
+  v1 += v4
+  if vF == 1 then v2 += 1
+  i := mul16-scratch-lomid
+  save v2
+
+  i := mul16-input-loa
+  load v4
+  i := mul16-scratch-lo
+  load v3
+  return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Test code. Prints a scrolling list of 2 factors and their product.
 # Hold 'W' to pause the scroll.
 : main
-  :alias a v6
-  :alias b v7
-  :alias result-lo v8
-  :alias result-hi v9
+  :alias a v5
+  :alias b v6
+  :alias c v7
+  :alias d v8
+
+  :alias result-lo v9
+  :alias result-lomid vA
+  :alias result-himid vB
+  :alias result-hi vC
 
   hires
   clear
   : mainloop
   a := random 0xFF
   b := random 0xFF
+  c := random 0xFF
+  d := random 0xFF
+
   v0 := a
   v1 := b
-  mul8
-  result-hi := v1
+  v2 := c
+  v3 := d
+
+  mul16
+
+  result-hi := v3
+  result-himid := v2
+  result-lomid := v1
   result-lo := v0
+
   print
   plane 3
-  scroll-up 15
+  scroll-up 8
   jump mainloop
 
 
-: dot 0x00 0x00 0x00 0x00 0x60 0x60
-: equals 0x00 0x00 0x00 0xF0 0x00 0xF0
+: dot  0x00 0x00 0x60 0x60
+: equals  0x00 0xF0 0x00 0xF0
 : print
-  :alias x vA
-  :alias y vB
-  x := 14
-  y := 50
+  :alias x vD
+  :alias y vE
+  x := 4
+  y := 58
 
   plane 1
+  v0 := b
+  print-byte
   v0 := a
   print-byte
 
   x += 2
   i := dot
   plane 1
-  sprite x y 6
+  sprite x y 4
   plane 2
-  sprite x y 6
+  sprite x y 4
   x += 8
-
   plane 1
-  v0 := b
+  v0 := d
+  print-byte
+  v0 := c
   print-byte
 
   x += 4
   i := equals
   plane 1
-  sprite x y 6
+  sprite x y 4
   plane 2
-  sprite x y 6
-  x += 10
+  sprite x y 4
+  x += 8
 
   plane 2
   v0 := result-hi
+  print-byte
+  v0 := result-himid
+  print-byte
+
+  x += 2
+
+  v0 := result-lomid
   print-byte
   v0 := result-lo
   print-byte
 
   v0 := 5
-  v1 := 30
+  v1 := 8
   delay := v1
   : delay-loop
   if v0 key then delay := v1
@@ -225,15 +339,15 @@
 : print-byte
   v1 := v0
   v0-shr4
-  i := bighex v0
-  sprite x y 10
-  x += 10
+  i := hex v0
+  sprite x y 5
+  x += 6
 
   v0 := v1
   vF := 0xF
   v0 &= vF
-  i := bighex v0
-  sprite x y 10
-  x += 10
+  i := hex v0
+  sprite x y 5
+  x += 6
 
   return
